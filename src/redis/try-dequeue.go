@@ -35,7 +35,7 @@ func (w *Worker) TryDequeue(
 
 	// Check if the time of the first element is before or equal to current time
 	currentTime := time.Now()
-	if firstElementTime.After(currentTime) {
+	if currentTime.After(firstElementTime) {
 		w.releaseLock(ctx)
 		// Schedule replacement timer job
 		return w.ScheduleDequeue(firstElementTime, ctx)
