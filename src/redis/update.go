@@ -10,9 +10,9 @@ func (r *RedisData) UpdateRedisClient(redisClient *redis.Client) {
 	r.redisClient = redisClient
 }
 
-// Updates redisListKey and isn't thread safe.
-func (r *RedisData) UpdateListKey(redisListKey string) {
-	r.redisListKey = redisListKey
+// Updates redisSetKey and isn't thread safe.
+func (r *RedisData) UpdateSetKey(redisSetKey string) {
+	r.RedisSetKey = redisSetKey
 }
 
 // Executes thread safe stop at timer.

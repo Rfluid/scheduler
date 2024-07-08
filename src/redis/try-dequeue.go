@@ -14,12 +14,12 @@ func (w *Worker) TryDequeue(
 	ctx context.Context, // Context passed to redis.
 ) error {
 	// Acquiring redis lock
-	w.listMu.Lock()
+	w.setMu.Lock()
 
 	// Get the first element
 	firstElement, err := w.First(ctx)
 	if err != nil {
-		defer w.listMu.Unlock()
+		defer w.setMu.Unlock()
 		return err
 	}
 
@@ -29,8 +29,7 @@ func (w *Worker) TryDequeue(
 	// Check if the time of the first element is before or equal to current time
 	currentTime := time.Now()
 	if firstElementTime.After(currentTime) {
-		defer w.listMu.Unlock()
-		// Schedule replacement timer job
+		defer w.setMu.Unlock()
 		return w.ScheduleDequeue(firstElementTime, ctx)
 	}
 
@@ -38,7 +37,7 @@ func (w *Worker) TryDequeue(
 	var errWg sync.WaitGroup
 	errWg.Add(3)
 	go func() {
-		defer w.listMu.Unlock()
+		defer w.setMu.Unlock()
 		errCh <- w.Dequeue(ctx)
 
 		score, err := w.FirstScore(ctx)
@@ -75,7 +74,7 @@ func (w *Worker) TryDequeue(
 
 // Removes the first element from the sorted set.
 func (w *Worker) Dequeue(ctx context.Context) error {
-	_, err := w.redisClient.ZRemRangeByRank(ctx, w.redisListKey, 0, 0).Result()
+	_, err := w.redisClient.ZRemRangeByRank(ctx, w.RedisSetKey, 0, 0).Result()
 	if err != nil {
 		return err
 	}

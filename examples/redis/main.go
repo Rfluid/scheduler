@@ -64,6 +64,15 @@ func main() {
 	)
 
 	worker.InsertSortedByDate(
+		map[string]string{"inserting": "equalElements"}, currentTime.Add(8*time.Second), ctx,
+	)
+	worker.InsertSortedByDate(
+		map[string]string{"inserting": "equalElements"}, // This element will replace the score of equal element.
+		currentTime.Add(4*time.Second),
+		ctx,
+	)
+
+	worker.InsertSortedByDate(
 		map[string]string{"fourth": "print"}, future.Add(1*time.Second), ctx,
 	)
 
@@ -71,7 +80,7 @@ func main() {
 
 	time.Sleep(sleepTime * time.Second)
 	fmt.Println()
-	fmt.Printf("Done sleeping. Terminating the program with %d tasks executed.\n", executionCounter)
+	fmt.Printf("Terminating the program with %d tasks executed.\n", executionCounter)
 }
 
 func connectToRedis() *redis.Client {
