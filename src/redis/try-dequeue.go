@@ -22,12 +22,11 @@ func (w *Worker) TryDequeue(
 	if !acquired {
 		return errors.New("could not acquire lock")
 	}
-	// Ensure the lock is released at the end
-	defer w.releaseLock(ctx)
 
 	// Get the first element
 	firstElement, err := w.First(ctx)
 	if err != nil {
+		w.releaseLock(ctx)
 		return err
 	}
 
@@ -37,6 +36,7 @@ func (w *Worker) TryDequeue(
 	// Check if the time of the first element is before or equal to current time
 	currentTime := time.Now()
 	if firstElementTime.After(currentTime) {
+		w.releaseLock(ctx)
 		// Schedule replacement timer job
 		return w.ScheduleDequeue(firstElementTime, ctx)
 	}
@@ -45,6 +45,7 @@ func (w *Worker) TryDequeue(
 	var errWg sync.WaitGroup
 	errWg.Add(3)
 	go func() {
+		defer w.releaseLock(ctx)
 		errCh <- w.Dequeue(ctx)
 
 		score, err := w.FirstScore(ctx)
