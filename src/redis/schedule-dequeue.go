@@ -13,7 +13,7 @@ func (w *Worker) ScheduleDequeue(
 	w.timerMu.Lock()
 	defer w.timerMu.Unlock()
 
-	// Stop the existing timer scheduler if running
+	// Stop the existing timer scheduler if running and drain it
 	if w.timer != nil {
 		w.timer.Stop()
 	}
@@ -23,7 +23,7 @@ func (w *Worker) ScheduleDequeue(
 
 	// Replace the old timer with the new one
 	w.timer = time.AfterFunc(durationUntilExecuteAt, func() {
-		go w.TryDequeue(ctx)
+		w.TryDequeue(ctx)
 	})
 
 	return nil

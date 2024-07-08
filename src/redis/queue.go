@@ -3,7 +3,6 @@ package redis_scheduler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"sync"
 	"time"
 
@@ -16,6 +15,12 @@ import (
 // The date is converted to Unix using common_service.DateToFloat so we can manage Redis scores.
 //
 // If the executeAt score is smaller than the score of the first element, the next dequeue is rescheduled using ScheduleDequeue.
+//
+// Inserts element sorted by date into the Redis list.
+//
+// If the data is repeated, the element is not inserted; it will just replace the score of the equivalent element.
+// This is due to the properties of Redis' sets. Therefore, users must manage
+// primary keys to avoid data not being inserted.
 func (w *Worker) InsertSortedByDate(
 	data any, // Data to schedule propagation.
 	executeAt time.Time, // Execution date of data propagation.
@@ -28,15 +33,9 @@ func (w *Worker) InsertSortedByDate(
 	var errWg sync.WaitGroup
 
 	// Acquiring redis lock
-	acquired, err := w.acquireLock(ctx)
-	if err != nil {
-		return err
-	}
-	if !acquired {
-		return errors.New("could not acquire lock")
-	}
+	w.setMu.Lock()
 	// Ensure the lock is released at the end
-	defer w.releaseLock(ctx)
+	defer w.setMu.Unlock()
 
 	// Get the score of the first element before insertion
 	errWg.Add(1)
@@ -77,7 +76,7 @@ func (w *Worker) InsertSortedByDate(
 	// Insert the data into the sorted set
 	errWg.Add(1)
 	go func() {
-		_, err = w.redisClient.ZAdd(ctx, w.redisListKey, redis.Z{
+		_, err := w.redisClient.ZAdd(ctx, w.RedisSetKey, redis.Z{
 			Score:  <-scoreCh,
 			Member: <-dataStrCh,
 		}).Result()
@@ -101,7 +100,7 @@ func (w *Worker) InsertSortedByDate(
 
 // Returns the score pointer of the first element if the queue has any elements. Otherwise, returns nil.
 func (w *Worker) FirstScore(ctx context.Context) (*float64, error) {
-	firstElement, err := w.redisClient.ZRangeWithScores(ctx, w.redisListKey, 0, 0).Result()
+	firstElement, err := w.redisClient.ZRangeWithScores(ctx, w.RedisSetKey, 0, 0).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +112,7 @@ func (w *Worker) FirstScore(ctx context.Context) (*float64, error) {
 
 // Returns the first element of the queue. If the length is zero, returns an empty element struct.
 func (w *Worker) First(ctx context.Context) (redis.Z, error) {
-	firstElement, err := w.redisClient.ZRangeWithScores(ctx, w.redisListKey, 0, 0).Result()
+	firstElement, err := w.redisClient.ZRangeWithScores(ctx, w.RedisSetKey, 0, 0).Result()
 	if err != nil {
 		return redis.Z{}, err
 	}
