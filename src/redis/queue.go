@@ -3,7 +3,6 @@ package redis_scheduler
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"sync"
 	"time"
 
@@ -28,15 +27,9 @@ func (w *Worker) InsertSortedByDate(
 	var errWg sync.WaitGroup
 
 	// Acquiring redis lock
-	acquired, err := w.acquireLock(ctx)
-	if err != nil {
-		return err
-	}
-	if !acquired {
-		return errors.New("could not acquire lock")
-	}
+	w.listMu.Lock()
 	// Ensure the lock is released at the end
-	defer w.releaseLock(ctx)
+	defer w.listMu.Unlock()
 
 	// Get the score of the first element before insertion
 	errWg.Add(1)
@@ -77,7 +70,7 @@ func (w *Worker) InsertSortedByDate(
 	// Insert the data into the sorted set
 	errWg.Add(1)
 	go func() {
-		_, err = w.redisClient.ZAdd(ctx, w.redisListKey, redis.Z{
+		_, err := w.redisClient.ZAdd(ctx, w.redisListKey, redis.Z{
 			Score:  <-scoreCh,
 			Member: <-dataStrCh,
 		}).Result()

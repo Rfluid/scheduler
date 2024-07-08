@@ -13,12 +13,12 @@ import (
 type RedisData struct {
 	redisClient  *redis.Client
 	redisListKey string // Key of the sorted list in Redis.
-	redisLockKey string // Key to use for locking.
 }
 
 type Worker struct {
-	timer    *time.Timer              // Used to schedule dequeues. Only one dequeue is scheduled at a time.
-	timerMu  sync.Mutex               // Prevents data races when changing the timer.
+	timer    *time.Timer // Used to schedule dequeues. Only one dequeue is scheduled at a time.
+	timerMu  sync.Mutex  // Prevents data races when changing the timer.
+	listMu   sync.Mutex
 	callback func(data redis.Z) error // Propagates the data after dequeuing.
 	RedisData
 }
@@ -30,13 +30,11 @@ var _ worker.Worker[context.Context, redis.Z] = &Worker{}
 func Create(
 	redisClient *redis.Client,
 	redisListKey string, // Key of the sorted list in Redis.
-	redisLockKey string, // Key to use for locking.
 ) *Worker {
 	w := Worker{
 		RedisData: RedisData{
 			redisClient:  redisClient,
 			redisListKey: redisListKey,
-			redisLockKey: redisLockKey,
 		},
 	}
 

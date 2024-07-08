@@ -2,7 +2,6 @@ package redis_scheduler
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
@@ -15,18 +14,12 @@ func (w *Worker) TryDequeue(
 	ctx context.Context, // Context passed to redis.
 ) error {
 	// Acquiring redis lock
-	acquired, err := w.acquireLock(ctx)
-	if err != nil {
-		return err
-	}
-	if !acquired {
-		return errors.New("could not acquire lock")
-	}
+	w.listMu.Lock()
 
 	// Get the first element
 	firstElement, err := w.First(ctx)
 	if err != nil {
-		w.releaseLock(ctx)
+		defer w.listMu.Unlock()
 		return err
 	}
 
@@ -35,8 +28,8 @@ func (w *Worker) TryDequeue(
 
 	// Check if the time of the first element is before or equal to current time
 	currentTime := time.Now()
-	if currentTime.After(firstElementTime) {
-		w.releaseLock(ctx)
+	if firstElementTime.After(currentTime) {
+		defer w.listMu.Unlock()
 		// Schedule replacement timer job
 		return w.ScheduleDequeue(firstElementTime, ctx)
 	}
@@ -45,7 +38,7 @@ func (w *Worker) TryDequeue(
 	var errWg sync.WaitGroup
 	errWg.Add(3)
 	go func() {
-		defer w.releaseLock(ctx)
+		defer w.listMu.Unlock()
 		errCh <- w.Dequeue(ctx)
 
 		score, err := w.FirstScore(ctx)

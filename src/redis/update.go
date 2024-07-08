@@ -15,11 +15,6 @@ func (r *RedisData) UpdateListKey(redisListKey string) {
 	r.redisListKey = redisListKey
 }
 
-// Updates redisLockKey and isn't thread safe.
-func (r *RedisData) UpdateLockKey(redisLockKey string) {
-	r.redisLockKey = redisLockKey
-}
-
 // Executes thread safe stop at timer.
 func (w *Worker) StopTimer() bool {
 	w.timerMu.Lock()
