@@ -1,0 +1,5 @@
+# Package testing
+/main.go
+/test.go
+/redis.go
+
