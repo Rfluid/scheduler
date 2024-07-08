@@ -1,4 +1,4 @@
-package example_redis
+package main
 
 import (
 	"context"
