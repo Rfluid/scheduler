@@ -11,7 +11,7 @@ import (
 
 // Manages Redis data to handle workers.
 type RedisData struct {
-	redisClient *redis.Client
+	redisClient redis.Cmdable
 	RedisSetKey string // Key of the sorted list in Redis.
 }
 
@@ -29,12 +29,12 @@ var _ worker.Worker[context.Context, redis.Z] = &Worker{}
 
 // Creates a Redis worker.
 func Create(
-	redisClient *redis.Client,
+	cmdable redis.Cmdable,
 	redisSetKey string, // Key of the sorted list in Redis.
 ) *Worker {
 	w := Worker{
 		RedisData: RedisData{
-			redisClient: redisClient,
+			redisClient: cmdable,
 			RedisSetKey: redisSetKey,
 		},
 	}

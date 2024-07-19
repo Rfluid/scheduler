@@ -6,8 +6,8 @@ import (
 
 // Updates redisClient and isn't thread safe.
 // You can't do basic operations like insert sorted if your client is nil. Note that while correct uses of nil client do exist, they are rare.
-func (r *RedisData) UpdateRedisClient(redisClient *redis.Client) {
-	r.redisClient = redisClient
+func (r *RedisData) UpdateRedisClient(cmdable redis.Cmdable) {
+	r.redisClient = cmdable
 }
 
 // Updates redisSetKey and isn't thread safe.
