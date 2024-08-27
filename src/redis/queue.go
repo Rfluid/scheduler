@@ -3,6 +3,7 @@ package redis_scheduler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
@@ -110,14 +111,14 @@ func (w *Worker) FirstScore(ctx context.Context) (*float64, error) {
 	return &firstElement[0].Score, nil
 }
 
-// Returns the first element of the queue. If the length is zero, returns an empty element struct.
+// Returns the first element of the queue. If the length is zero, returns an error.
 func (w *Worker) First(ctx context.Context) (redis.Z, error) {
 	firstElement, err := w.redisClient.ZRangeWithScores(ctx, w.RedisSetKey, 0, 0).Result()
 	if err != nil {
 		return redis.Z{}, err
 	}
 	if len(firstElement) == 0 {
-		return redis.Z{}, nil
+		return redis.Z{}, errors.New("empty zset")
 	}
 	return firstElement[0], nil
 }

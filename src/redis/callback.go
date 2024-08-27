@@ -14,3 +14,15 @@ func (w *Worker) SetCallback(
 func (w *Worker) Callback(data redis.Z) error {
 	return w.callback(data)
 }
+
+// Sets the callback executed for each dequeue error.
+func (w *Worker) SetTryDequeueErrCallback(
+	cbk func(error),
+) error {
+	w.tryDequeueErrCallback = cbk
+	return nil
+}
+
+func (w *Worker) TryDequeueErrCallback(err error) {
+	w.tryDequeueErrCallback(err)
+}
