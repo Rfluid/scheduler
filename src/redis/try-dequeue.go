@@ -19,6 +19,9 @@ func (w *Worker) TryDequeue(
 	// Get the first element
 	firstElement, err := w.First(ctx)
 	if err != nil {
+		defer func() {
+			go w.TryDequeueErrCallback(err)
+		}()
 		defer w.setMu.Unlock()
 		return err
 	}
@@ -29,8 +32,12 @@ func (w *Worker) TryDequeue(
 	// Check if the time of the first element is before or equal to current time
 	currentTime := time.Now()
 	if firstElementTime.After(currentTime) {
+		err := w.ScheduleDequeue(firstElementTime, ctx)
+		defer func() {
+			go w.TryDequeueErrCallback(err)
+		}()
 		defer w.setMu.Unlock()
-		return w.ScheduleDequeue(firstElementTime, ctx)
+		return err
 	}
 
 	errCh := make(chan error)
@@ -65,9 +72,16 @@ func (w *Worker) TryDequeue(
 	for err := range errCh {
 		errWg.Done()
 		if err != nil {
+			defer func() {
+				go w.TryDequeueErrCallback(err)
+			}()
 			return err
 		}
 	}
+
+	defer func() {
+		go w.TryDequeueErrCallback(nil)
+	}()
 
 	return nil
 }

@@ -15,6 +15,9 @@ type Worker[T, U any] interface {
 
 	Callback(storedData U) error                    // The callback executed for each dequeue. You might want to use this callback to propagate the data to another service that will effectively use the data. It is not recommended to do heavy processing here.
 	SetCallback(cbk func(storedData U) error) error // Sets the callback executed for each dequeue.
+
+	TryDequeueErrCallback(error) // Executed for each error in TryDequeue.
+	SetTryDequeueErrCallback(cbk func(error)) error
 }
 
 // TODO: Add more methods for manipulating the Worker queue.
